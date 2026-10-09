@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101114">
+<title>W Wallet</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0c0f;color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:24px;font-size:25px;font-weight:800;border-bottom:1px solid #292b32}
+nav{display:flex;gap:8px;overflow:auto;padding:12px}
+nav button,button,select,input{font:inherit}
+nav button,.action{border:1px solid #30333b;background:#191b21;color:white;border-radius:11px;padding:11px}
+main{max-width:850px;margin:auto;padding:18px}
+h2{font-size:17px}
+.panel{background:#15171c;border:1px solid #292c34;border-radius:20px;padding:20px;margin-bottom:18px}
+.card{background:linear-gradient(125deg,#f2f2f3,#9ba1aa,#e7e8eb,#9299a3);color:#141519;border-radius:22px;padding:24px;min-height:230px;box-shadow:0 15px 40px #0006}
+.cardtop,.bottom{display:flex;justify-content:space-between;align-items:center}
+.amex{font-size:20px;font-weight:900}
+.tag{font-size:10px;font-weight:800;letter-spacing:2px}
+.chip{margin-top:24px;width:38px;height:28px;border:1px solid #555;border-radius:7px;background:#ddd}
+.balance{display:flex;align-items:center;gap:10px;margin-top:16px}
+#amount{font-size:34px;font-weight:800;letter-spacing:-1px}
+.edit{border:0;border-radius:8px;background:#1112;padding:8px}
+.number{letter-spacing:3px;margin-top:16px;font-weight:700}
+.bottom{margin-top:20px;font-size:11px;font-weight:800}
+.actions{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:14px}
+.action{cursor:pointer}
+.primary{background:#e5e7eb;color:#101114;font-weight:700}
+label{display:block;color:#a6abb5;margin:12px 0 7px;font-size:13px}
+input,select{width:100%;padding:12px;background:#0d0e12;color:white;border:1px solid #343741;border-radius:10px}
+.row{display:flex;gap:8px;align-items:center}
+.row button{white-space:nowrap}
+#history{padding-left:0;list-style:none}
+#history li{display:flex;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid #292c34}
+.muted{color:#9298a5;font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<header>◈ W Wallet</header>
+<nav>
+<button onclick="show('wallet')">⌂ Domů</button>
+<button onclick="show('transactions')">➜ Transakce</button>
+<button onclick="show('settings')">⚙ Nastavení</button>
+</nav>
+<main>
+<section id="wallet">
+<div class="panel">
+<h2>Peněženka <span style="float:right">•••</span></h2>
+<div class="card">
+<div class="cardtop"><div class="amex">American Express</div><div class="tag">VIRTUÁLNÍ KARTA</div></div>
+<div class="chip"></div>
+<div class="balance"><span id="amount">€0,00</span><button class="edit" onclick="editBalance()">✎</button></div>
+<div class="number">•••• •••• •••• 1234</div>
+<div class="bottom"><span>W WALLET MEMBER</span><span style="font-size:15px">AMEX</span></div>
+</div>
+<div class="actions">
+<button class="action primary" onclick="changeMoney(true)">＋ Přidat peníze</button>
+<button class="action" onclick="changeMoney(false)">↗ Odečíst</button>
+<button class="action" onclick="editBalance()">✎ Upravit zůstatek</button>
+<button class="action" onclick="show('transactions')">▤ Historie</button>
+</div>
+<p class="muted">Demo osobní peněženky. Částky jsou virtuální; aplikace nepřijímá skutečné platby a nevytváří skutečnou kartu American Express.</p>
+</div>
+<div class="panel">
+<h2>Poslední transakce</h2>
+<ul id="recent"></ul>
+</div>
+</section>
+<section id="transactions" style="display:none">
+<div class="panel"><h2>Historie transakcí</h2><ul id="history"></ul><button class="action" onclick="clearHistory()">Vymazat historii</button></div>
+</section>
+<section id="settings" style="display:none">
+<div class="panel">
+<h2>Nastavení</h2>
+<label for="currency">Měna zůstatku</label>
+<select id="currency" onchange="saveAndRender()">
+<option value="EUR">Euro (€)</option>
+<option value="CZK">Česká koruna (Kč)</option>
+<option value="USD">Americký dolar ($)</option>
+</select>
+<p class="muted">Orientační kurzy: 1 EUR = 25 Kč a 1 EUR = 1,08 USD. Zůstatek se ukládá v EUR.</p>
+<button class="action" onclick="resetWallet()">Resetovat demo peněženku</button>
+</div>
+</section>
+</main>
+<script>
+let balance=Number(localStorage.getItem('ww_balance')||0);
+let currency=localStorage.getItem('ww_currency')||'EUR';
+let history=JSON.parse(localStorage.getItem('ww_history')||'[]');
+const rates={EUR:1,CZK:25,USD:1.08};
+const symbols={EUR:'€',CZK:'Kč',USD:'$'};
+document.getElementById('currency').value=currency;
+function money(n){
+ let v=n*rates[currency];
+ return currency==='CZK'
+ ? new Intl.NumberFormat('cs-CZ',{maximumFractionDigits:2}).format(v)+' Kč'
+ : symbols[currency]+v.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function saveAndRender(){
+ currency=document.getElementById('currency').value;
+ localStorage.setItem('ww_balance',balance);
+ localStorage.setItem('ww_currency',currency);
+ localStorage.setItem('ww_history',JSON.stringify(history));
+ render();
+}
+function render(){
+ document.getElementById('amount').textContent=money(balance);
+ let html=history.length?history.map(t=>'<li><span>'+t.name+'</span><strong>'+t.sign+money(t.amount)+'</strong></li>').join(''):'<li class="muted">Zatím žádné transakce.</li>';
+ document.getElementById('history').innerHTML=html;
+ document.getElementById('recent').innerHTML=history.slice(0,4).map(t=>'<li>'+t.name+' — '+t.sign+money(t.amount)+'</li>').join('')||'<li class="muted">Zatím žádné transakce.</li>';
+}
+function editBalance(){
+ let value=prompt('Zadej nový zůstatek v '+currency+':',(balance*rates[currency]).toFixed(2));
+ if(value===null)return;
+ value=Number(value.replace(',','.'));
+ if(!Number.isFinite(value)||value<0){alert('Zadej platnou částku.');return;}
+ let next=value/rates[currency],diff=next-balance;
+ balance=next;
+ history.unshift({name:'Ruční úprava zůstatku',amount:Math.abs(diff),sign:diff>=0?'+':'−'});
+ saveAndRender();
+}
+function changeMoney(add){
+ let value=prompt((add?'Přidat':'Odečíst')+' částku v '+currency+':');
+ if(value===null)return;
+ value=Number(value.replace(',','.'));
+ if(!Number.isFinite(value)||value<=0){alert('Zadej platnou částku.');return;}
+ let eur=value/rates[currency];
+ if(!add&&eur>balance){alert('Nemáš dostatek virtuálních peněz.');return;}
+ balance+=add?eur:-eur;
+ history.unshift({name:add?'Přidání peněz':'Odečtení peněz',amount:eur,sign:add?'+':'−'});
+ saveAndRender();
+}
+function show(page){
+ ['wallet','transactions','settings'].forEach(id=>document.getElementById(id).style.display=id===page?'block':'none');
+}
+function clearHistory(){
+ if(confirm('Opravdu vymazat historii?')){history=[];saveAndRender();}
+}
+function resetWallet(){
+ if(confirm('Resetovat zůstatek i historii?')){balance=0;history=[];saveAndRender();}
+}
+render();
+</script>
+</body>
+</html>
